@@ -1,95 +1,74 @@
-# Fake Payment API
+# PayShield Core
 
-This repository contains a small **fake payment processor** built with
-Python and FastAPI.  Its goal is to help you understand payment
-workflows, RESTful API design and basic persistence without touching
-any real money or integrating with actual payment providers.
+## Overview
 
-## Features
+PayShield Core simulates the heart of a payment gateway. It exposes endpoints to authorize fake payments, simulate approval and decline scenarios and record transaction logs. The API is built with FastAPI and follows secure transaction flow patterns, making it ideal for practicing payment integration and exploring security concepts.
 
-* **Process payment requests**: POST to `/pay` with card details and
-  transaction data; the service performs a basic Luhn check and
-  pseudo‑randomly approves or declines the payment.
-* **Store transactions**: all requests and responses are stored in
-  MongoDB when available, or in an in‑memory list during development.
-* **Retrieve transactions**: list all stored transactions or fetch a
-  single one by its identifier.
-* **Health check**: quickly verify that the API is running via `/health`.
-* **OpenAPI documentation**: browse auto‑generated docs at `/docs` once
-  the server is running.
+### Visão Geral
 
-## Prerequisites
+O PayShield Core simula o núcleo de um gateway de pagamentos. Ele expõe endpoints para autorizar pagamentos fictícios, simular aprovações e recusas e registrar logs de transação. A API é construída com FastAPI e segue padrões de fluxo transacional seguro, sendo ideal para treinar integração de pagamentos e explorar conceitos de segurança.
 
-* Python 3.10+
-* Recommended: a running MongoDB instance for persistent storage
-* The dependencies listed in `requirements.txt`
-
-## Setup
-
-Clone the repository and install the dependencies:
-
-```sh
-pip install -r requirements.txt
-```
-
-Optionally, create a `.env` file at the root of the project and
-define `MONGO_URL` with your MongoDB connection string.  When
-`MONGO_URL` is undefined, the API will store transactions in memory:
+## Architecture / Arquitetura
 
 ```
-MONGO_URL=mongodb://localhost:27017/payments
+[Client] --> [PayShield Core API] --> [Data Store (MongoDB / In‑Memory)]
+     |                                   ^
+     +----------- Swagger / Docs --------+
 ```
 
-## Running the API
+This simple flow shows a client sending a payment to the API which processes it and stores the result. The same API exposes auto‑generated Swagger documentation for quick exploration.
 
-Start the server using `uvicorn`:
+## API and Swagger Documentation
 
-```sh
-uvicorn fake_payment_api.main:app --reload
-```
+The service includes interactive OpenAPI docs at `/docs`. Major endpoints include:
 
-The `--reload` flag enables hot reloading for development.  The
-service will be available at `http://127.0.0.1:8000`.
+- `POST /pay` – Process a payment request with card details and amount. Returns a status of `APPROVED` or `DECLINED`.
+- `GET /transactions` – List all processed transactions with status, amount, and timestamps.
+- `GET /transactions/{transaction_id}` – Retrieve a single transaction by its identifier.
+- `GET /health` – Health check endpoint to verify the service is running.
 
-Open the interactive API documentation at
-`http://127.0.0.1:8000/docs` to explore the endpoints.
+### Exemplos
 
-## Example Request
-
-### Process a payment
+Uma chamada de exemplo ao endpoint `/pay`:
 
 ```
-POST /pay HTTP/1.1
-Host: localhost:8000
-Content-Type: application/json
-
+POST /pay
 {
-  "amount": 49.99,
-  "currency": "USD",
-  "description": "Test order",
-  "card": {
-    "number": "4242 4242 4242 4242",
-    "expiry_month": 12,
-    "expiry_year": 2028,
-    "cvv": "123"
-  }
+  "card_number": "4111111111111111",
+  "expiry_month": "12",
+  "expiry_year": "2026",
+  "cvv": "123",
+  "amount": 100.0
+}
+Response:
+{
+  "status": "APPROVED",
+  "transaction_id": "abc123"
 }
 ```
 
-Sample response:
+## Use Cases / Casos de Uso
+
+- **Integration testing:** simulate card payments and observe approval or decline scenarios without touching real payment networks.
+- **Error handling:** validate how invalid inputs are handled (ex: falha na verificação de Luhn para números de cartão inválidos).
+- **Fraud experimentation:** chain calls to the PayShield Risk service (motor antifraude) to calculate risk scores before final approval.
+- **Education:** entender conceitos como autorização, captura, estornos, logs e idempotência.
+
+## Roadmap
+
+- Integrate PayShield Risk for real-time fraud scoring.
+- Add authentication (JWT) and rate limiting.
+- Support additional payment flows (capture, refund, reversal).
+- Persist transactions in PostgreSQL in addition to MongoDB.
+
+## Screenshots / Doc Preview
+
+Como a API utiliza FastAPI, a documentação interativa está disponível em `/docs` quando a aplicação está em execução. Abaixo um trecho ilustrativo do Swagger gerado automaticamente:
 
 ```
-{
-  "id": "b1a9292a-f2b1-4a8d-9d2c-3c98ab7107c5",
-  "status": "approved",
-  "message": "Payment approved",
-  "amount": 49.99,
-  "currency": "USD",
-  "created_at": "2026-06-23T12:34:56.789Z"
-}
+# Example excerpt of /docs (Swagger UI)
 ```
 
-## License
+## Disclaimer
 
-This code is provided under the MIT License.  See the `LICENSE` file
-for details.
+This is an educational project. The implementation uses only simulated data and does not handle real cardholder information or connect to any payment processors.
